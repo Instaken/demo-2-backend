@@ -17,7 +17,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Şimdilik sadece basit bir "Merhaba" mesajı.
 		// Modül 4'te buraya veritabanı bağlantısını ekleyeceğiz.
-		fmt.Fprintf(w, "Merhaba! Demo 2.0 CI/CD Pipeline çalıştı!")
+		fmt.Fprintf(w, "Merhaba! Demo 2.0 CI/CD Pipeline çalıştı ve şimdi push deneyeceğim.!")
 	})
 
 	log.Printf("backend-api ':%s' portunda dinlemeye başlıyor...", port)
