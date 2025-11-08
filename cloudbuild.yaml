@@ -1,0 +1,38 @@
+steps:
+# 1. ADIM: Docker Build
+- name: 'gcr.io/cloud-builders/docker'
+  dir: 'application'
+  args:
+    - 'build'
+    - '-t'
+    - '${_ARTIFACT_REGISTRY_PATH}/backend-api:latest'
+    - '.'
+
+# 2. ADIM: Docker Push
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'push'
+    - '${_ARTIFACT_REGISTRY_PATH}/backend-api:latest'
+
+# 3. ADIM: Cloud Run'a Deploy Et
+- name: 'gcr.io/google.com/cloudsdktool/google-cloud-cli'
+  entrypoint: gcloud
+  args:
+    - 'run'
+    - 'deploy'
+    - 'backend-api' # Terraform'da verdiğimiz Cloud Run servis adı
+    - '--image=${_ARTIFACT_REGISTRY_PATH}/backend-api:latest'
+    - '--region=${_REGION}'
+    - '--platform=managed'
+
+# === DEĞİŞKENLER ===
+substitutions:
+  _REGION: 'europa-west3' # Terraform'da seçtiğiniz bölge (BUNU KONTROL EDİN)
+  _ARTIFACT_REGISTRY_PATH: '${_REGION}-docker.pkg.dev/${PROJECT_ID}/my-backend-repo'
+
+# === GÜVENLİK (MODÜL 2'ye Bağlantı) ===
+serviceAccount: 'projects/${PROJECT_ID}/serviceAccounts/cloud-build-sa@${PROJECT_ID}.iam.gserviceaccount.com'
+
+# Yüklenen imajların listesi
+images:
+  - '${_ARTIFACT_REGISTRY_PATH}/backend-api:latest'

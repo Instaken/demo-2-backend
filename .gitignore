@@ -1,0 +1,9 @@
+# Terraform state
+infrastructure/*.tfstate
+infrastructure/*.tfstate.backup
+
+# Terraform provider eklentileri
+infrastructure/.terraform/
+
+# Terraform kilit dosyası
+infrastructure/.terraform.lock.hcl
