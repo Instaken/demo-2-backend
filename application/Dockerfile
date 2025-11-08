@@ -3,7 +3,7 @@ WORKDIR /app
 COPY go.mod . 
 RUN go mod download
 COPY . .
-RUN CG_ENABLED=0 GODS=linux go build -o /backend-api ./main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /backend-api ./main.go
 
 
 FROM alpine:latest
