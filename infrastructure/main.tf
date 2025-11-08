@@ -50,6 +50,11 @@ resource "google_project_service" "run_api" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "cloud_build_api" {
+  service            = "cloudbuild.googleapis.com"
+  disable_on_destroy = false
+}
+
 # === 2. AĞ (VPC) AYARLAMALARI ===
 
 # Varsayılan VPC ağını alma
