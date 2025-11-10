@@ -167,7 +167,7 @@ resource "google_project_iam_member" "log_writer" {
 
 resource "google_project_iam_member" "build_log_writer" {
   project = local.project_id
-  role    = "roles/cloudbuild.builds.logWriter"
+  role    = "roles/cloudbuild.logWriter"
   member  = "serviceAccount:${google_service_account.cloud_build_sa.email}"
 }
 
