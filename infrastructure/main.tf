@@ -16,7 +16,7 @@ terraform {
 # GCP sağlayıcısının yapılandırılması
 provider "google" {
   project = "ozan-gcp-demo"
-  region  = "europa-west3"
+  region  = "europe-west3"
 }
 
 locals {
