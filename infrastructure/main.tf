@@ -165,6 +165,12 @@ resource "google_project_iam_member" "log_writer" {
   member  = "serviceAccount:${google_service_account.backend_api_sa.email}"
 }
 
+resource "google_project_iam_member" "build_log_writer" {
+  project = local.project_id
+  role    = "roles/cloudbuild.builds.logWriter"
+  member  = "serviceAccount:${google_service_account.cloud_build_sa.email}"
+}
+
 # --- Kimlik 2: Cloud Build (CI/CD Pipeline'ı) ---
 # Bu kimlik, kodumuzu deploy ederken (CI/CD sürecinde) kullanılacak.
 resource "google_service_account" "cloud_build_sa" {
