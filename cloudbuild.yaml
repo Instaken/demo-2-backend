@@ -27,7 +27,7 @@ steps:
 
 # === DEĞİŞKENLER ===
 substitutions:
-  _REGION: 'europa-west3' # Terraform'da seçtiğiniz bölge (BUNU KONTROL EDİN)
+  _REGION: 'europe-west3' # Terraform'da seçtiğiniz bölge (BUNU KONTROL EDİN)
   _ARTIFACT_REGISTRY_PATH: '${_REGION}-docker.pkg.dev/${PROJECT_ID}/my-backend-repo'
 
 # === GÜVENLİK (MODÜL 2'ye Bağlantı) ===
