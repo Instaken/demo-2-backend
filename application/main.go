@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net" // Bu sefer 'net' kütüphanesini gerçekten kullanıyoruz
 	"net/http"
 	"os"
 
@@ -12,8 +13,7 @@ import (
 	"cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 
-	// PGX v5'in 'database/sql' sürücüsünü (stdlib) import ediyoruz
-	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/stdlib" // 'stdlib' sürücüsünü kullanıyoruz
 )
 
 var db *sql.DB // Veritabanı bağlantısını global yapıyoruz
@@ -64,27 +64,38 @@ func main() {
 }
 
 // === BOZUK FONKSİYONUN DÜZELTİLMİŞ HALİ ===
-func connectWithConnector(user, pass, db, connName string) (*sql.DB, error) {
+func connectWithConnector(user, pass, dbName, connName string) (*sql.DB, error) {
 	ctx := context.Background()
-	// 1. Dialer (Tünel) oluştur
-	d, err := cloudsqlconn.NewDialer(ctx)
-	if err != nil {
-		return nil, err
-	}
-	
-	// 2. DSN (Bağlantı Bilgisi) hazırla
-	// 'stdlib' sürücüsünün özel 'cloudsql' formatını kullanıyoruz
-	dsn := fmt.Sprintf("user=%s password=%s database=%s host=%s", user, pass, db, connName)
-	
-	// 3. 'pgx/v5/stdlib' sürücüsünü, özel Dialer'ımızı (tünel) kullanacak şekilde
-	// 'database/sql' kütüphanesine KAYDET (Register)
-	// (RegisterDriver yerine bu kullanılır)
-	sql.Register("cloudsql-postgres", cloudsqlconn.Driver(d, cloudsqlconn.IAMAuthN))
 
-	// 4. Bağlantıyı aç
-	// (Burada "cloudsql-postgres" ismini kullanıyoruz, çünkü az önce kaydettik)
-	return sql.Open("cloudsql-postgres", dsn)
+	// 1. Dialer (Tünel) oluştur ve IAM ile doğrulamayı AÇ
+	// (Bu 'WithIAMAuthN()' çağrısı, 'cloudsqlconn.IAMAuthN' hatasını düzeltir)
+	d, err := cloudsqlconn.NewDialer(ctx, cloudsqlconn.WithIAMAuthN())
+	if err != nil {
+		return nil, fmt.Errorf("NewDialer: %w", err)
+	}
+
+	// 2. 'pgx/v5/stdlib' için bir DSN (bağlantı dizesi) hazırla
+	dsn := fmt.Sprintf("user=%s password=%s dbname=%s", user, pass, dbName)
+	
+	// 3. 'stdlib.ParseConfig', 'stdlib' import'unu kullandığımız yerdir
+	config, err := stdlib.ParseConfig(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("ParseConfig: %w", err)
+	}
+
+	// 4. (Bu, 'cloudsqlconn.Driver' hatasını çözen sihirli kısımdır)
+	// 'pgx' sürücüsüne, normal bir TCP bağlantısı yerine
+	// bizim özel Cloud SQL Tünelimizi (Dialer) kullanmasını söylüyoruz.
+	config.DialFunc = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		// 'connName' (bağlantı adı), Terraform output'tan aldığımız addır.
+		return d.Dial(ctx, connName)
+	}
+
+	// 5. 'stdlib.OpenDB', 'stdlib' import'unu kullandığımız diğer yerdir.
+	db := stdlib.OpenDB(*config)
+	return db, nil
 }
+
 
 // getSecret: Secret Manager API'sini çağırarak şifreyi alır.
 // (Bu fonksiyonda değişiklik yok, zaten doğruydu)
