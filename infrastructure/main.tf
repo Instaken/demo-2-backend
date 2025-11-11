@@ -202,9 +202,8 @@ resource "google_cloud_run_service" "backend_api" {
 
   template {
     spec {
-      containers {
-        image = "us-docker.pkg.dev/cloudrun/container/hello"
-      }
+      # 'containers' bloğu SİLİNDİ.
+      # Terraform artık imajı yönetmiyor.
       service_account_name = google_service_account.backend_api_sa.email
     }
     metadata {
@@ -274,4 +273,23 @@ output "db_name" {
 
 output "db_user" {
   value = google_sql_user.app_user.name
+}
+
+# === 11. EKSİK İZİN (IAM - PUBLIC ACCESS) ===
+# Cloud Run servisimize (backend-api) 'allUsers' (herkesin)
+# erişebilmesi (çağırabilmesi) için "Invoker" rolü veriyoruz.
+# Bu, 403 Forbidden (Yasak) hatasını çözer.
+
+resource "google_cloud_run_service_iam_member" "public_invoker" {
+  location = google_cloud_run_service.backend_api.location
+  project  = google_cloud_run_service.backend_api.project
+  service  = google_cloud_run_service.backend_api.name
+
+  role   = "roles/run.invoker"
+  member = "allUsers" # 'allUsers' internetteki herkes demektir
+}
+
+output "backend_api_url" {
+  value       = google_cloud_run_service.backend_api.status[0].url
+  description = "Deploy edilen Cloud Run servisinin URL'si."
 }
