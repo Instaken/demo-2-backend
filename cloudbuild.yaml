@@ -1,5 +1,6 @@
 steps:
 # 1. ADIM: Docker Build
+# (Değişiklik yok - 'application' klasörünü build et)
 - name: 'gcr.io/cloud-builders/docker'
   dir: 'application'
   args:
@@ -9,12 +10,14 @@ steps:
     - '.'
 
 # 2. ADIM: Docker Push
+# (Değişiklik yok - Artifact Registry'ye push'la)
 - name: 'gcr.io/cloud-builders/docker'
   args:
     - 'push'
     - '${_ARTIFACT_REGISTRY_PATH}/backend-api:latest'
 
-# 3. ADIM: Cloud Run'a Deploy Et
+# 3. ADIM: Cloud Run'a Deploy Et (MODÜL 5 DÜZENLEMESİ)
+# (Değişiklik burada! Veritabanı bilgilerini ekliyoruz)
 - name: 'gcr.io/google.com/cloudsdktool/google-cloud-cli'
   entrypoint: gcloud
   args:
@@ -24,18 +27,29 @@ steps:
     - '--image=${_ARTIFACT_REGISTRY_PATH}/backend-api:latest'
     - '--region=${_REGION}'
     - '--platform=managed'
+    
+    # === MODÜL 5 DEĞİŞİKLİĞİ ===
+    # 'main.go' kodumuzun ihtiyaç duyduğu 4 ortam değişkenini
+    # burada Cloud Run servisine GÜVENLİ bir şekilde aktarıyoruz.
+    # Lütfen 'terraform output'tan aldığınız değerleri buraya yapıştırın.
+    - '--set-env-vars=DB_USER=[app-user],DB_NAME=[products-db],DB_CONN_NAME=[ozan-gcp-demo:europe-west3:main-db-f0f0b518],DB_SECRET_ID=[projects/634398253577/secrets/db_password/versions/1]'
 
 # === DEĞİŞKENLER ===
+# (Değişiklik yok)
 substitutions:
-  _REGION: 'europe-west3' # Terraform'da seçtiğiniz bölge (BUNU KONTROL EDİN)
+  _REGION: 'europa-west3'
   _ARTIFACT_REGISTRY_PATH: '${_REGION}-docker.pkg.dev/${PROJECT_ID}/my-backend-repo'
 
 # === GÜVENLİK (MODÜL 2'ye Bağlantı) ===
+# (Değişiklik yok)
 serviceAccount: 'projects/${PROJECT_ID}/serviceAccounts/cloud-build-sa@${PROJECT_ID}.iam.gserviceaccount.com'
 
 # Yüklenen imajların listesi
+# (Değişiklik yok)
 images:
   - '${_ARTIFACT_REGISTRY_PATH}/backend-api:latest'
 
+# === GÜVENLİK (MODÜL 4'e Bağlantı) ===
+# (Değişiklik yok)
 options:
   logging: CLOUD_LOGGING_ONLY
