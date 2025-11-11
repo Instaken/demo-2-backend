@@ -5,13 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 
 	"cloud.google.com/go/cloudsqlconn"
 	"cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+
+	// PGX v5'in 'database/sql' sürücüsünü (stdlib) import ediyoruz
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -19,14 +20,13 @@ var db *sql.DB // Veritabanı bağlantısını global yapıyoruz
 
 func main() {
 	// Adım 1: Gerekli 4 değeri ortam değişkenlerinden (Environment Variables) oku
-	// (Bu değişkenleri bir sonraki adımda 'cloudbuild.yaml' ile ayarlayacağız)
-	dbUser := os.Getenv("DB_USER")                 // 'app-user'
-	dbName := os.Getenv("DB_NAME")                 // 'products-db'
-	dbSecretID := os.Getenv("DB_SECRET_ID")        // 'projects/...'
-	dbConnectionName := os.Getenv("DB_CONN_NAME")  // 'ozan-gcp-demo:europa-west3:...'
+	dbUser := os.Getenv("DB_USER")
+	dbName := os.Getenv("DB_NAME")
+	dbSecretID := os.Getenv("DB_SECRET_ID")
+	dbConnectionName := os.Getenv("DB_CONN_NAME")
 
 	if dbUser == "" || dbName == "" || dbSecretID == "" || dbConnectionName == "" {
-		log.Fatal("DB_USER, DB_NAME, DB_SECRET_ID, veya DB_CONN_NAME ortam değişkenleri ayarlanmamış!")
+		log.Fatalf("DB_USER, DB_NAME, DB_SECRET_ID, veya DB_CONN_NAME ortam değişkenleri ayarlanmamış!")
 	}
 
 	// Adım 2: Veritabanı şifresini Secret Manager'dan (Kasa) güvenle al
@@ -36,6 +36,7 @@ func main() {
 	}
 
 	// Adım 3: Cloud SQL'e özel (private) bağlantıyı kur
+	// (Bu, 'connectWithConnector' fonksiyonunun DÜZELTİLMİŞ halidir)
 	db, err = connectWithConnector(dbUser, dbPass, dbName, dbConnectionName)
 	if err != nil {
 		log.Fatalf("Cloud SQL'e bağlanılamadı: %v", err)
@@ -62,24 +63,31 @@ func main() {
 	}
 }
 
-// connectWithConnector: Google'ın sağladığı 'Cloud SQL Connector'ı kullanarak
-// VPC tüneli üzerinden güvenli bir bağlantı açar.
+// === BOZUK FONKSİYONUN DÜZELTİLMİŞ HALİ ===
 func connectWithConnector(user, pass, db, connName string) (*sql.DB, error) {
-	d, err := cloudsqlconn.NewDialer(context.Background())
+	ctx := context.Background()
+	// 1. Dialer (Tünel) oluştur
+	d, err := cloudsqlconn.NewDialer(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var opts []cloudsqlconn.DialOption
-	config, err := stdlib.RegisterDriver("cloudsql-postgres", cloudsqlconn.WithDialer(d), cloudsqlconn.WithIAMAuthN())
-	if err != nil {
-		return nil, err
-	}
-
+	
+	// 2. DSN (Bağlantı Bilgisi) hazırla
+	// 'stdlib' sürücüsünün özel 'cloudsql' formatını kullanıyoruz
 	dsn := fmt.Sprintf("user=%s password=%s database=%s host=%s", user, pass, db, connName)
+	
+	// 3. 'pgx/v5/stdlib' sürücüsünü, özel Dialer'ımızı (tünel) kullanacak şekilde
+	// 'database/sql' kütüphanesine KAYDET (Register)
+	// (RegisterDriver yerine bu kullanılır)
+	sql.Register("cloudsql-postgres", cloudsqlconn.Driver(d, cloudsqlconn.IAMAuthN))
+
+	// 4. Bağlantıyı aç
+	// (Burada "cloudsql-postgres" ismini kullanıyoruz, çünkü az önce kaydettik)
 	return sql.Open("cloudsql-postgres", dsn)
 }
 
 // getSecret: Secret Manager API'sini çağırarak şifreyi alır.
+// (Bu fonksiyonda değişiklik yok, zaten doğruydu)
 func getSecret(secretID string) (string, error) {
 	ctx := context.Background()
 	client, err := secretmanager.NewClient(ctx)
