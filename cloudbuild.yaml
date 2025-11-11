@@ -37,7 +37,7 @@ steps:
 # === DEĞİŞKENLER ===
 # (Değişiklik yok)
 substitutions:
-  _REGION: 'europa-west3'
+  _REGION: 'europe-west3'
   _ARTIFACT_REGISTRY_PATH: '${_REGION}-docker.pkg.dev/${PROJECT_ID}/my-backend-repo'
 
 # === GÜVENLİK (MODÜL 2'ye Bağlantı) ===
