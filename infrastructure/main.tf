@@ -166,6 +166,16 @@ resource "google_project_iam_member" "secret_accessor" {
   member  = "serviceAccount:${google_service_account.backend_api_sa.email}"
 }
 
+# İzin 4 (YENİ EKLENEN HATA DÜZELTMESİ - MODÜL 5):
+# 'backend-api-sa' (Uygulama Robotu) robotunun,
+# 'VPC Connector'ı (Ağ Tüneli) kullanabilmesi için GEREKLİ İZİN.
+# Bu, 'connection refused' hatasını çözer.
+resource "google_project_iam_member" "vpc_network_user" {
+  project = local.project_id
+  role    = "roles/compute.networkUser"
+  member  = "serviceAccount:${google_service_account.backend_api_sa.email}"
+}
+
 # --- Kimlik 2: Cloud Build (CI/CD Pipeline'ı) ---
 resource "google_service_account" "cloud_build_sa" {
   account_id   = "cloud-build-sa"
