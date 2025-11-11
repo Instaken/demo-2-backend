@@ -16,8 +16,9 @@ steps:
     - 'push'
     - '${_ARTIFACT_REGISTRY_PATH}/backend-api:latest'
 
-# 3. ADIM: Cloud Run'a Deploy Et (MODÜL 5 DÜZENLEMESİ)
-# (Değişiklik burada! Veritabanı bilgilerini ekliyoruz)
+# 3. ADIM: Cloud Run'a Deploy Et (GÜNCEL / PROXY YÖNTEMİ)
+# Bu, 'application/main.go' kodunun 'Proxy Yöntemi' ile
+# çalışması için gereken GÜNCEL halidir.
 - name: 'gcr.io/google.com/cloudsdktool/google-cloud-cli'
   entrypoint: gcloud
   args:
@@ -28,11 +29,16 @@ steps:
     - '--region=${_REGION}'
     - '--platform=managed'
     
-    # === MODÜL 5 DEĞİŞİKLİĞİ ===
-    # 'main.go' kodumuzun ihtiyaç duyduğu 4 ortam değişkenini
-    # burada Cloud Run servisine GÜVENLİ bir şekilde aktarıyoruz.
-    # Lütfen 'terraform output'tan aldığınız değerleri buraya yapıştırın.
-    - '--set-env-vars=DB_USER=[app-user],DB_NAME=[products-db],DB_CONN_NAME=[ozan-gcp-demo:europe-west3:main-db-f0f0b518],DB_SECRET_ID=[projects/634398253577/secrets/db_password/versions/1]'
+    # === MODÜL 5 (PROXY) GÜNCELLEMESİ ===
+    # 'main.go' kodumuzun (Proxy yöntemi) ihtiyaç duyduğu YENİ değişkenler:
+    # 'DB_HOST' ve 'DB_PORT' eklendi, 'DB_CONN_NAME' env var'dan kalktı.
+    # (Değerlerinizi parantezsiz olarak yerleştirdim)
+    - '--set-env-vars=DB_USER=app-user,DB_NAME=products-db,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SECRET_ID=projects/634398253577/secrets/db_password/versions/1'
+    
+    # === PROXY'Yİ EKLEYEN SİHİRLİ SATIR ===
+    # Bu komut, Cloud Run'a 'cloud-sql-proxy' sidecar'ını eklemesini söyler
+    # ve ona HANGİ veritabanına bağlanacağını söyler:
+    - '--add-cloudsql-instances=ozan-gcp-demo:europe-west3:main-db-f0f0b518'
 
 # === DEĞİŞKENLER ===
 # (Değişiklik yok)
