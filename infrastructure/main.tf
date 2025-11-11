@@ -176,6 +176,16 @@ resource "google_project_iam_member" "vpc_network_user" {
   member  = "serviceAccount:${google_service_account.backend_api_sa.email}"
 }
 
+# İzin 5 (YENİ EKLENEN HATA DÜZELTMESİ - MODÜL 5):
+# 'backend-api-sa' (Uygulama Robotu) robotunun,
+# Cloud SQL Proxy'nin başlatma sırasında ihtiyaç duyduğu
+# meta verileri okuyabilmesi (API'yi kontrol edebilmesi) için GEREKLİ İZİN.
+resource "google_project_iam_member" "cloudsql_viewer" {
+  project = local.project_id
+  role    = "roles/cloudsql.viewer"
+  member  = "serviceAccount:${google_service_account.backend_api_sa.email}"
+}
+
 # --- Kimlik 2: Cloud Build (CI/CD Pipeline'ı) ---
 resource "google_service_account" "cloud_build_sa" {
   account_id   = "cloud-build-sa"
@@ -212,24 +222,41 @@ resource "google_cloud_run_service" "backend_api" {
 
   template {
     spec {
-      # 'containers' bloğu SİLİNDİ.
-      # Terraform artık imajı yönetmiyor.
+      # === YENİ EKLENEN BLOK (HATA DÜZELTMESİ) ===
+      # Servisin oluşabilmesi için BİR konteyner tanımı ZORUNLUDUR.
+      # CI/CD pipeline'ı zaten bunun üzerine yazacağı için
+      # Google'ın "hello" imajını yer tutucu olarak kullanıyoruz.
+      containers {
+        image = "us-docker.pkg.dev/cloudrun/container/hello"
+      }
+      # ==========================================
+
       service_account_name = google_service_account.backend_api_sa.email
     }
     metadata {
       annotations = {
-        "run.googleapis.com/vpc-access-connector" : google_vpc_access_connector.main_connector.name
+        "run.googleapis.com/vpc-access-connector" : google_vpc_access_connector.main_connector.name,
         "run.googleapis.com/vpc-access-egress" : "private-ranges-only"
       }
     }
   }
+
+  # === EN ÖNEMLİ KISIM (SAVAŞI ÖNLER) ===
+  # Terraform'a "CI/CD bu imajı değiştirdiğinde,
+  # onu 'hata' olarak görme ve 'hello'ya geri döndürme" diyoruz.
+  lifecycle {
+    ignore_changes = [
+      template[0].spec[0].containers[0].image,
+    ]
+  }
+  # =====================================
+
   depends_on = [
     google_project_service.run_api,
     google_service_account.backend_api_sa,
     google_vpc_access_connector.main_connector
   ]
 }
-
 # === 7. GÜVENLİ ŞİFRE (SECRET MANAGER) ===
 
 resource "random_password" "db_password" {
